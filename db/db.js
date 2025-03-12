@@ -7,10 +7,10 @@ export async function conectarDB() {
         const conexion = await mongoose.connect("mongodb://localhost:27017/MongoDBApp");
         //console.log(conexion);
         //console.log("Conexión correcta a mongoDB");
-        return mensaje(200,"Conexion correcta","");
+        return mensaje(200,"Conexion correcta");
                 
     } catch (error) {
-        return mensaje(400,error);
+        return mensaje(400,"Error al conectarse a la BD",error);
     }
 }
 

@@ -5,44 +5,57 @@ import {crearToken} from "../libs/jwt.js";
 
 export const register = async ({username, email, password})=>{
     try {
-        const usuarioDuplicado = await User.findOne({username});
-        const emailDuplicado = await User.findOne({email});
-        if (usuarioDuplicado || emailDuplicado){
+        const usuarioExistente = await User.findOne({username});
+        const emailExistente = await User.findOne({email});
+        if (usuarioExistente || emailExistente){
             return(400,"Usuario Duplicado, ya existe");
         }
         const {salt, hash} = encriptarPassword(password);
-        const dataUser = new User({username, email, password: hash, salt});
+        const data = new User({username, email, password: hash, salt});
 
-        const respuestaMongo = await dataUser.save();
-        const token = await crearToken({id:respuestaMongo._id});
+        var respuesta = await data.save();
+        const token = await crearToken(
+            {
+                id:respuesta._id,
+                username:respuesta.username,
+                email:respuesta.email,
+                tipoUsuario:respuesta.tipoUsuario
+            }
+        );
 
-        return mensaje(200,"Usuario Registrado","",token);
-        //console.log("Usuario guardado correctamente");
-        
+        return mensaje(200,respuesta.tipoUsuario,"",token);
+        //console.log("Usuario guardado correctamente");    
     } catch (error) {
         return mensaje(400,"Error al registrar al usuario",error);
-        //console.log(error);
-                
+        //console.log(error);          
     }
 };
 
 export const login = async ({username, password}) =>{
     try {
-        const usuarioEncontrado = await User.findOne({username});
-        if(!usuarioEncontrado){
-            return mensaje(400, "1Datos Incorrectos", error);
+        const usuarioCorrecto = await User.findOne({username});
+        console.log(usuarioCorrecto); 
+        if(!usuarioCorrecto){
+            return mensaje(400, "Datos Incorrectos de Usuario");
         }
         
-        const passwordValido = validarPassword(password, usuarioEncontrado.salt, usuarioEncontrado.password);
-        if (!passwordValido) {
-            return mensaje (400, "2Datos incorrectos", error);
+        const passwordCorrecto = validarPassword(password, usuarioCorrecto.salt, usuarioCorrecto.password);
+        if (!passwordCorrecto) {
+            return mensaje (400, "Datos incorrectos de Password");
             
         }
-        const token = await crearToken ({id:usuarioEncontrado._id});
-        return mensaje(200, `Bienvenido ${usuarioEncontrado.username}`, "", token);
+        const token = await crearToken (
+            {
+                id:usuarioCorrecto._id, 
+                username:usuarioCorrecto.username, 
+                email:usuarioCorrecto.email, 
+                tipoUsuario:usuarioCorrecto.tipoUsuario
+            }
+        );
+        return mensaje(200, usuarioCorrecto.tipoUsuario,"",token);
 
     } catch (error) {
-        return mensaje(400, "3Datos Incorrectos", error);
+        return mensaje(400, "Datos Incorrectos", error);
     }
 }
 
@@ -59,7 +72,7 @@ export const mostrarUsuarios = async () => {
     
 }
 
-export const buscarPorId = async (id) => {
+export const buscarUsuarioPorId = async (id) => {
     try {
         const usuario = await User.findById(id);
         return usuario;
@@ -92,4 +105,14 @@ export const borrarUsuario = async (id) => {
     }
 }
 
-
+export const isAdmin = async (id) => {
+    try {
+        const usuario = await User.findById(id);
+        if(usuario.tipoUsuario != "admin"){
+            return false;
+        }
+        return true;
+    } catch (error) {
+        return mensaje (400, "Admin no Autorizado", error);
+    }
+}
